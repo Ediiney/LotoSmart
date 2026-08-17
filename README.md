@@ -33,3 +33,8 @@ Acesse http://localhost:3000
 5. Autenticação e perfis.
 6. Motor Python para simulações Monte Carlo e otimização pesada.
 7. IA somente após benchmarks objetivos contra estratégias aleatórias.
+
+## V1.13.0
+- Statistical Validation Engine V1: backtest histórico do portfólio estrutural contra carteiras aleatórias de mesmo custo.
+- Corpus separado do Data Agent ao vivo, com 250 concursos históricos por modalidade.
+- Resultados persistidos no Supabase por usuário.
