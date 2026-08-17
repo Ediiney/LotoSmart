@@ -1,0 +1,41 @@
+LOTO SMART V1.17.2 - HOTFIX COMPLETO
+
+O que ja foi corrigido diretamente no Supabase:
+1. Admin agora pode ler todos os perfis.
+2. Usuarios comuns continuam vendo somente o proprio perfil.
+3. O novo usuario thaniamartins10@gmail.com existe e esta como user/free.
+4. Existem atualmente 4 usuarios no Auth e os 4 possuem profiles.
+
+O que este pacote corrige no frontend:
+- Versao visual V1.14.0 -> V1.17.2.
+- Produto /app volta a consultar os concursos pela RPC get_public_latest_draws().
+- Cadastro/login fecha o modal assim que uma sessao valida existir.
+- Remove texto incorreto de confirmacao obrigatoria de e-mail.
+- Mantem a camada de planos da V1.17.
+
+COMO APLICAR
+
+1. Extraia ESTE ZIP diretamente em:
+   E:\LotoSmart-work
+
+2. Confirme que apareceu:
+   E:\LotoSmart-work\lotosmart-v1.17.2-product-fix.patch
+   E:\LotoSmart-work\aplicar-hotfix-v1.17.2.cmd
+
+3. Clique duas vezes em:
+   aplicar-hotfix-v1.17.2.cmd
+
+OU execute manualmente no PowerShell:
+   cd E:\LotoSmart-work
+   git apply --check .\lotosmart-v1.17.2-product-fix.patch
+   git apply .\lotosmart-v1.17.2-product-fix.patch
+
+4. Depois:
+   git status
+   git add .
+   git commit -m "hotfix: align product with v1.17.2 and restore contest data"
+   git push origin main
+
+IMPORTANTE
+- Nao rode git apply novamente depois que o patch ja tiver sido aplicado.
+- O ajuste da tela Admin nao exige arquivo local: a policy foi corrigida diretamente no Supabase.

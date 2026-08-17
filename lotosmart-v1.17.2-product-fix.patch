@@ -1,0 +1,52 @@
+diff --git a/app/page.tsx b/app/page.tsx
+--- a/app/page.tsx
++++ b/app/page.tsx
+@@
+-  useEffect(() => {
+-    supabase.auth.getSession().then(({ data }) => { setSession(data.session); setSessionReady(true) })
+-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, next) => { setSession(next); setSessionReady(true) })
++  useEffect(() => {
++    supabase.auth.getSession().then(({ data }) => {
++      setSession(data.session)
++      setSessionReady(true)
++      if (data.session) { setAuthOpen(false); setAuthBusy(false); authLock.current = false }
++    })
++    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, next) => {
++      setSession(next)
++      setSessionReady(true)
++      if (next) { setAuthOpen(false); setAuthBusy(false); authLock.current = false }
++    })
+     return () => subscription.unsubscribe()
+   }, [])
+@@
+   async function loadPublic() {
+-    const { data } = await supabase.from('lottery_draws').select('*').order('contest_number', { ascending: false })
++    const { data, error } = await supabase.rpc('get_public_latest_draws')
++    if (error) {
++      setMsg('Não foi possível atualizar os concursos agora. Mantendo os últimos dados carregados.')
++    }
+     if (data) {
+       const map: Record<string, Draw> = {}
+-      for (const draw of data as Draw[]) if (!map[draw.game]) map[draw.game] = draw
++      for (const draw of data as Draw[]) map[draw.game] = draw
+       setDraws(map)
+     }
+@@
+       if (error) { setMsg(error.message); return }
+       if (data.session) {
++        setSession(data.session)
++        setSessionReady(true)
+         setAuthOpen(false)
+       } else {
+-        setMsg('Conta criada. Enviamos um e-mail de confirmação antes do primeiro acesso.')
++        setMsg('Conta criada. Entre com seu e-mail e senha.')
+       }
+@@
+-    <header><div className="brand">Loto<span>Smart</span><small> V1.14.0</small></div><button className="login" onClick={() => setAuthOpen(true)}>Entrar / Criar conta</button></header>
++    <header><div className="brand">Loto<span>Smart</span><small> V1.17.2</small></div><button className="login" onClick={() => setAuthOpen(true)}>Entrar / Criar conta</button></header>
+@@
+-    <section className="howItWorks"><p className="eyebrow">COMO FUNCIONA</p><h2>O diferencial fica protegido dentro da sua conta.</h2><div className="steps"><div><b>01</b><h3>Entre</h3><p>E-mail e senha, com confirmação de conta.</p></div><div><b>02</b><h3>Gere</h3><p>Quatro combinações complementares.</p></div><div><b>03</b><h3>Salve</h3><p>Histórico real dos seus jogos.</p></div><div><b>04</b><h3>Acompanhe</h3><p>Conferência e premiações.</p></div></div></section>
++    <section className="howItWorks"><p className="eyebrow">COMO FUNCIONA</p><h2>O diferencial fica protegido dentro da sua conta.</h2><div className="steps"><div><b>01</b><h3>Entre</h3><p>E-mail e senha.</p></div><div><b>02</b><h3>Gere</h3><p>Quatro combinações complementares.</p></div><div><b>03</b><h3>Salve</h3><p>Histórico real dos seus jogos.</p></div><div><b>04</b><h3>Acompanhe</h3><p>Conferência e premiações.</p></div></div></section>
+@@
+-    <header><div className="brand">Loto<span>Smart</span><small> V1.14.0</small></div><div className="headActions"><span className="email">{session.user.email}</span><button className="ghost" onClick={() => supabase.auth.signOut()}>Sair</button></div></header>
++    <header><div className="brand">Loto<span>Smart</span><small> V1.17.2</small></div><div className="headActions"><span className="email">{session.user.email}</span><button className="ghost" onClick={() => supabase.auth.signOut()}>Sair</button></div></header>
