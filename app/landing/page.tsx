@@ -1,6 +1,6 @@
 'use client'
 
-import { FormEvent, useEffect, useState } from 'react'
+import { FormEvent, useCallback, useEffect, useState } from 'react'
 import { supabase } from '../../lib/supabase'
 import styles from './landing.module.css'
 
@@ -15,12 +15,75 @@ type Plan = {
   features: string[]
 }
 
+type PublicDraw = {
+  game: 'megasena' | 'lotofacil' | 'quina'
+  contest_number: number
+  draw_date: string | null
+  numbers: number[]
+  status: string
+  confidence: number | null
+  source_count: number | null
+  next_contest_number: number | null
+  next_draw_date: string | null
+  estimated_next_prize: number | string | null
+  updated_at: string
+}
+
+const GAME_ORDER: PublicDraw['game'][] = ['megasena', 'lotofacil', 'quina']
+const GAME_LABEL: Record<PublicDraw['game'], string> = {
+  megasena: 'Mega-Sena',
+  lotofacil: 'Lotofácil',
+  quina: 'Quina',
+}
+
+const money = new Intl.NumberFormat('pt-BR', {
+  style: 'currency',
+  currency: 'BRL',
+  maximumFractionDigits: 0,
+})
+
+function formatDate(value: string | null) {
+  if (!value) return 'Data aguardando atualização'
+  const [y,m,d] = value.slice(0,10).split('-')
+  if (!y || !m || !d) return value
+  return `${d}/${m}/${y}`
+}
+
+function formatUpdated(value?: string) {
+  if (!value) return 'Atualização indisponível'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return 'Atualização indisponível'
+  return `Atualizado às ${date.toLocaleTimeString('pt-BR', { hour:'2-digit', minute:'2-digit' })}`
+}
+
 export default function LandingPage() {
   const [plans, setPlans] = useState<Plan[]>([])
   const [foundersRemaining, setFoundersRemaining] = useState(100)
   const [email, setEmail] = useState('')
   const [message, setMessage] = useState('')
   const [busy, setBusy] = useState(false)
+
+  const [draws, setDraws] = useState<PublicDraw[]>([])
+  const [drawLoading, setDrawLoading] = useState(true)
+  const [drawError, setDrawError] = useState('')
+
+  const loadDraws = useCallback(async () => {
+    const { data, error } = await supabase.rpc('get_public_latest_draws')
+    if (error) {
+      setDrawError('Não foi possível atualizar os concursos agora. Os últimos dados confirmados serão exibidos assim que a conexão for restabelecida.')
+      setDrawLoading(false)
+      return
+    }
+
+    const rows = (data || []) as PublicDraw[]
+    if (rows.length) {
+      setDraws(rows)
+      setDrawError('')
+    } else {
+      setDrawError('Os concursos estão temporariamente indisponíveis.')
+    }
+    setDrawLoading(false)
+  }, [])
 
   useEffect(() => {
     Promise.all([
@@ -30,7 +93,19 @@ export default function LandingPage() {
       if (plansResult.data) setPlans(plansResult.data as Plan[])
       if (typeof foundersResult.data === 'number') setFoundersRemaining(foundersResult.data)
     })
-  }, [])
+
+    loadDraws()
+    const timer = window.setInterval(loadDraws, 60_000)
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') loadDraws()
+    }
+    document.addEventListener('visibilitychange', onVisibility)
+
+    return () => {
+      window.clearInterval(timer)
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [loadDraws])
 
   async function captureFounder(e: FormEvent) {
     e.preventDefault()
@@ -59,6 +134,8 @@ export default function LandingPage() {
   const foundersSold = Math.max(0, limit - foundersRemaining)
   const progress = Math.min(100, (foundersSold / limit) * 100)
 
+  const drawsByGame = new Map(draws.map(draw => [draw.game, draw]))
+
   return (
     <main className={styles.page}>
       <header className={styles.header}>
@@ -66,6 +143,7 @@ export default function LandingPage() {
           <span className={styles.mark}>✦</span><b>Loto<span>Smart</span></b>
         </a>
         <nav>
+          <a href="#concursos">Concursos</a>
           <a href="#recursos">Recursos</a>
           <a href="#planos">Planos</a>
           <a href="/app">Entrar</a>
@@ -98,6 +176,87 @@ export default function LandingPage() {
           <div className={styles.progress}><i style={{ width: `${progress}%` }} /></div>
           <p>Acesso vitalício aos recursos Pro atuais para os primeiros usuários.</p>
         </aside>
+      </section>
+
+      <section id="concursos" className={styles.section}>
+        <div className={styles.sectionHeading}>
+          <div>
+            <p className={styles.eyebrow}>DADOS DOS CONCURSOS</p>
+            <h2>Últimos resultados confirmados.</h2>
+          </div>
+          <button className={styles.refreshButton} onClick={loadDraws} disabled={drawLoading}>
+            {drawLoading ? 'Atualizando…' : 'Atualizar dados'}
+          </button>
+        </div>
+
+        {drawError && <div className={styles.drawWarning}>{drawError}</div>}
+
+        <div className={styles.drawGrid}>
+          {GAME_ORDER.map(game => {
+            const draw = drawsByGame.get(game)
+
+            if (!draw) {
+              return (
+                <article className={styles.drawCard} key={game}>
+                  <div className={styles.drawTop}>
+                    <div>
+                      <small>{GAME_LABEL[game]}</small>
+                      <strong>Consultando…</strong>
+                    </div>
+                    <span className={styles.drawStatusPending}>AGUARDANDO</span>
+                  </div>
+                  <p className={styles.drawMuted}>Buscando o último concurso confirmado.</p>
+                </article>
+              )
+            }
+
+            const estimated = Number(draw.estimated_next_prize || 0)
+
+            return (
+              <article className={styles.drawCard} key={game}>
+                <div className={styles.drawTop}>
+                  <div>
+                    <small>{GAME_LABEL[game]}</small>
+                    <strong>Concurso {draw.contest_number}</strong>
+                    <span>{formatDate(draw.draw_date)}</span>
+                  </div>
+                  <span className={draw.status === 'confirmed' ? styles.drawStatus : styles.drawStatusPending}>
+                    {draw.status === 'confirmed' ? 'CONFIRMADO' : 'PROVISÓRIO'}
+                  </span>
+                </div>
+
+                <div className={styles.balls}>
+                  {(draw.numbers || []).map(number => (
+                    <b key={number}>{String(number).padStart(2,'0')}</b>
+                  ))}
+                </div>
+
+                <div className={styles.drawMeta}>
+                  <div>
+                    <small>Próximo concurso</small>
+                    <strong>{draw.next_contest_number || '—'}</strong>
+                    <span>{formatDate(draw.next_draw_date)}</span>
+                  </div>
+                  <div>
+                    <small>Prêmio estimado</small>
+                    <strong>{estimated > 0 ? money.format(estimated) : 'Aguardando'}</strong>
+                    <span>{draw.source_count ? `${draw.source_count} fontes verificadas` : 'Fonte em validação'}</span>
+                  </div>
+                </div>
+
+                <footer className={styles.drawFooter}>
+                  <span>{formatUpdated(draw.updated_at)}</span>
+                  <span>{draw.confidence ? `Confiança dos dados: ${draw.confidence}%` : 'Validação em andamento'}</span>
+                </footer>
+              </article>
+            )
+          })}
+        </div>
+
+        <p className={styles.drawDisclaimer}>
+          Os resultados são consolidados pelo Data Agent a partir de múltiplas fontes e persistidos no LotoSmart.
+          Em indisponibilidade externa, mantemos o último concurso confirmado em vez de exibir dados vazios.
+        </p>
       </section>
 
       <section id="recursos" className={styles.section}>
