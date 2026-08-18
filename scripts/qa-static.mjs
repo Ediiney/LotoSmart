@@ -3,8 +3,8 @@ import { readFile } from 'node:fs/promises'
 const checks = [
   {
     file: 'app/app/labs/page.tsx',
-    mustInclude: ['Voltar ao Portfólio', "href=\"/app\"", "Gaming Engine v4"],
-    mustNotInclude: ['Nova simulação</button><a href=\"/app\">Voltar ao produto</a>']
+    mustInclude: ['Voltar ao Portfólio', 'Gerar novos jogos no Portfólio', "href=\"/app\"", 'Gaming Engine v4'],
+    mustNotInclude: ['Nova simulação', 'Voltar ao produto']
   },
   {
     file: 'app/landing/PaidLanding.tsx',
@@ -15,6 +15,10 @@ const checks = [
     file: 'app/app/PaidAccessGate.tsx',
     mustInclude: ['R$ 49,90', "plan:'none'|'pro'|'founders'", 'ASSINATURA NECESSÁRIA'],
     mustNotInclude: ['Plano Free permite']
+  },
+  {
+    file: 'app/app/ProductApp.tsx',
+    mustNotInclude: ["plan:'free'|'pro'|'founders'", 'Seu plano Free permite']
   }
 ]
 
