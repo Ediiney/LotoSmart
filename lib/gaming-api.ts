@@ -28,16 +28,32 @@ export type ServerWheelResult={
   validated:boolean
 }
 
-type EngineResponse<T>={ok?:boolean;result?:T;error?:string;message?:string}
+type EngineResponse<T>={ok?:boolean;result?:T;error?:string;message?:string;retry_after_seconds?:number}
+
+async function errorCodeFromInvoke(error:any){
+  try{
+    const response=error?.context as Response|undefined
+    if(response&&typeof response.clone==='function'){
+      const payload=await response.clone().json().catch(()=>null)
+      if(payload?.error)return String(payload.error)
+      if(payload?.message)return String(payload.message)
+      if(response.status===401)return 'UNAUTHORIZED'
+      if(response.status===403)return 'PLAN_REQUIRED'
+      if(response.status===429)return 'RATE_LIMITED'
+    }
+  }catch{}
+  const message=String(error?.message||'')
+  if(message.includes('Failed to send a request'))return 'NETWORK_OR_CORS'
+  return message||'ENGINE_REQUEST_FAILED'
+}
 
 async function invokeEngine<T>(body:Record<string,unknown>):Promise<T>{
+  const {data:{session}}=await supabase.auth.getSession()
+  if(!session)throw new Error('UNAUTHORIZED')
+
   const {data,error}=await supabase.functions.invoke<EngineResponse<T>>('gaming-engine',{body})
-  if(error)throw new Error(error.message||'Falha de comunicação com o Gaming Engine.')
-  if(data?.result===undefined){
-    if(data?.error==='PLAN_REQUIRED')throw new Error('PLAN_REQUIRED')
-    if(data?.error==='UNAUTHORIZED')throw new Error('UNAUTHORIZED')
-    throw new Error(data?.message||data?.error||'Resposta inválida do Gaming Engine.')
-  }
+  if(error)throw new Error(await errorCodeFromInvoke(error))
+  if(data?.result===undefined)throw new Error(data?.error||data?.message||'INVALID_ENGINE_RESPONSE')
   return data.result
 }
 
