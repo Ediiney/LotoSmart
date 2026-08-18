@@ -20,7 +20,7 @@ export default function SavedGamesManager(){
 
   async function load(){
     const {data:{session}}=await supabase.auth.getSession()
-    if(!session){setReady(true);setPortfolios([]);return}
+    if(!session){setReady(true);setPortfolios([]);setEnt(null);return}
     const [{data:p},{data:t},{data:e}]=await Promise.all([
       supabase.from('portfolios').select('id,game,contest_number,total_cost,created_at').eq('user_id',session.user.id).order('created_at',{ascending:false}),
       supabase.from('tickets').select('id,portfolio_id').eq('user_id',session.user.id),
@@ -47,9 +47,10 @@ export default function SavedGamesManager(){
     try{
       const {error}=await supabase.from('portfolios').delete().eq('id',id)
       if(error){setMessage(error.message);return}
-      setMessage('Portfólio excluído e espaço liberado.')
       await load()
       window.dispatchEvent(new CustomEvent('lotosmart:saved-games-changed'))
+      setMessage('Portfólio excluído e espaço liberado. Atualizando a visão…')
+      window.setTimeout(()=>window.location.reload(),650)
     }finally{setBusy(null)}
   }
 
