@@ -10,11 +10,14 @@ type Subscription={id:string;user_id:string;plan_id:string;status:string;billing
 type Transaction={id:string;status:string;gross_amount_brl:number;fee_amount_brl:number;net_amount_brl:number;paid_at:string|null;created_at:string}
 type Entry={id:string;entry_type:'income'|'expense';category:string;description:string;amount_brl:number;occurred_on:string;vendor:string|null;recurring:boolean}
 type HealthDraw={game:string;contest_number:number;status:string;confidence:number;source_count:number;updated_at:string}
-type HealthPayload={ok:boolean;database:string;latency_ms:number;data?:{status:string;missing:string[];stale:string[];provisional?:string[];draws:HealthDraw[]};data_agent?:{status:string;fresh_sources:number};engines?:Record<string,string>;integrations?:Record<string,string>;checked_at:string}
+type EngineActionHealth={action:string;total:number;success:number;rejected:number;failed:number}
+type GamingHealth={version:string;runs_24h:number;success_24h:number;rejected_24h:number;failed_24h:number;avg_latency_ms:number;by_action:EngineActionHealth[];last_errors?:Array<{action:string;status:string;error_code:string;created_at:string}>}
+type HealthPayload={ok:boolean;database:string;latency_ms:number;data?:{status:string;missing:string[];stale:string[];provisional?:string[];draws:HealthDraw[]};data_agent?:{status:string;fresh_sources:number};gaming_engine?:GamingHealth;engines?:Record<string,string>;integrations?:Record<string,string>;checked_at:string}
 type MockPlan='free'|'pro'|'founders'
 
 const brl=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'})
 const gameName:Record<string,string>={megasena:'Mega-Sena',lotofacil:'Lotofácil',quina:'Quina'}
+const actionName:Record<string,string>={optimize_budget:'Budget',monte_carlo:'Monte Carlo',build_wheel:'Wheeling'}
 
 export default function AdminPage(){
   const [session,setSession]=useState<Session|null>(null)
@@ -92,7 +95,7 @@ export default function AdminPage(){
     if(profile.role==='admin')return
     setPlanBusy(profile.id);setMessage('')
     try{
-      const {data,error}=await supabase.rpc('admin_mock_set_plan',{target_user:profile.id,target_plan:targetPlan})
+      const {error}=await supabase.rpc('admin_mock_set_plan',{target_user:profile.id,target_plan:targetPlan})
       if(error){setMessage(`Não foi possível alterar o plano: ${error.message}`);return}
       setMessage(`${profile.email||'Usuário'} agora está em ${targetPlan.toUpperCase()} no ambiente de teste.`)
       await loadAll()
@@ -105,7 +108,7 @@ export default function AdminPage(){
 
   return <main className={styles.page}>
     <header>
-      <div><p>LOTO<span>SMART</span> • ADMIN 2.1</p><h1>Visão do negócio</h1></div>
+      <div><p>LOTO<span>SMART</span> • ADMIN 2.2</p><h1>Visão do negócio</h1></div>
       <div style={{display:'flex',gap:16}}><a href="/">Abrir site</a><a href="/app">Abrir produto</a></div>
     </header>
 
@@ -134,7 +137,9 @@ export default function AdminPage(){
         <HealthCard label="Banco" value={(health?.database||'aguardando').toUpperCase()} ok={health?.database==='ok'}/>
         <HealthCard label="Data Agent" value={`${health?.engines?.data_agent||'aguardando'} • ${health?.data_agent?.status||'unknown'}`} ok={health?.data_agent?.status==='success'}/>
         <HealthCard label="Fontes frescas" value={String(health?.data_agent?.fresh_sources??0)} ok={(health?.data_agent?.fresh_sources??0)>=3}/>
-        <HealthCard label="Gaming Engine" value={health?.engines?.gaming_engine||'aguardando'} ok={Boolean(health?.engines?.gaming_engine)}/>
+        <HealthCard label="Gaming Engine" value={health?.gaming_engine?.version||health?.engines?.gaming_engine||'aguardando'} ok={health?.gaming_engine?.failed_24h===0}/>
+        <HealthCard label="Gaming runs 24h" value={String(health?.gaming_engine?.runs_24h??0)} ok={(health?.gaming_engine?.failed_24h??0)===0}/>
+        <HealthCard label="Gaming latência" value={`${health?.gaming_engine?.avg_latency_ms??0} ms`} ok={(health?.gaming_engine?.avg_latency_ms??0)<1500}/>
         <HealthCard label="Validation" value={health?.engines?.validation_engine||'aguardando'} ok={Boolean(health?.engines?.validation_engine)}/>
         <HealthCard label="Mercado Pago" value={health?.integrations?.mercado_pago||'pending'} ok={false}/>
         <HealthCard label="WhatsApp" value={health?.integrations?.whatsapp||'pending'} ok={false}/>
@@ -142,6 +147,21 @@ export default function AdminPage(){
       <div className={styles.table} style={{marginTop:18}}>
         <div className={styles.tableHead}><span>Modalidade</span><span>Concurso</span><span>Status</span><span>Fontes</span></div>
         {(health?.data?.draws||[]).map(d=><div key={d.game}><span>{gameName[d.game]||d.game}</span><span>{d.contest_number}</span><span>{d.status} • {d.confidence}%</span><span>{d.source_count}</span></div>)}
+      </div>
+    </section>
+
+    <section className={styles.panel}>
+      <h2>Gaming Engine v2</h2>
+      <p>Telemetria das últimas 24 horas. Rejeições de plano/rate limit são separadas de falhas reais do motor.</p>
+      <div className={styles.metrics} style={{marginTop:16}}>
+        <Metric label="Sucessos" value={String(health?.gaming_engine?.success_24h??0)}/>
+        <Metric label="Rejeitados" value={String(health?.gaming_engine?.rejected_24h??0)}/>
+        <Metric label="Falhas" value={String(health?.gaming_engine?.failed_24h??0)}/>
+        <Metric label="Latência média" value={`${health?.gaming_engine?.avg_latency_ms??0} ms`}/>
+      </div>
+      <div className={styles.table}>
+        <div className={styles.tableHead}><span>Motor</span><span>Execuções</span><span>Sucesso</span><span>Rejeitado / Falha</span></div>
+        {(health?.gaming_engine?.by_action||[]).map(a=><div key={a.action}><span>{actionName[a.action]||a.action}</span><span>{a.total}</span><span>{a.success}</span><span>{a.rejected} / {a.failed}</span></div>)}
       </div>
     </section>
 
