@@ -1,6 +1,6 @@
 'use client'
 
-import {useEffect,useState} from 'react'
+import {useEffect,useRef,useState} from 'react'
 import type {Session} from '@supabase/supabase-js'
 import {supabase} from '../../lib/supabase'
 import ProductApp from './ProductApp'
@@ -8,6 +8,22 @@ import SavedGamesManager from './SavedGamesManager'
 import styles from './paid-access-gate.module.css'
 
 type Entitlements={role:string;plan:'none'|'pro'|'founders';source?:string;has_paid_access?:boolean;is_pro:boolean}
+type CachedAccess={userId:string;ent:Entitlements;at:number}
+const ACCESS_CACHE='lotosmart-paid-access-v1'
+const CACHE_TTL=5*60*1000
+
+function readCache(userId:string):Entitlements|null{
+  try{
+    const raw=sessionStorage.getItem(ACCESS_CACHE)
+    if(!raw)return null
+    const cached=JSON.parse(raw) as CachedAccess
+    if(cached.userId!==userId||Date.now()-cached.at>CACHE_TTL)return null
+    return cached.ent
+  }catch{return null}
+}
+function writeCache(userId:string,ent:Entitlements|null){
+  try{if(ent)sessionStorage.setItem(ACCESS_CACHE,JSON.stringify({userId,ent,at:Date.now()}));else sessionStorage.removeItem(ACCESS_CACHE)}catch{}
+}
 
 export default function PaidAccessGate(){
   const [session,setSession]=useState<Session|null>(null)
@@ -19,24 +35,52 @@ export default function PaidAccessGate(){
   const [confirm,setConfirm]=useState('')
   const [busy,setBusy]=useState(false)
   const [message,setMessage]=useState('')
+  const syncing=useRef(false)
 
-  async function sync(){
-    const {data:{session:next}}=await supabase.auth.getSession()
-    setSession(next)
-    if(next){
-      const {data}=await supabase.rpc('get_my_entitlements')
-      setEnt((data||null) as Entitlements|null)
-    }else setEnt(null)
-    setReady(true)
+  async function refreshEntitlements(current:Session,background=false){
+    if(syncing.current)return
+    syncing.current=true
+    try{
+      const {data,error}=await supabase.rpc('get_my_entitlements')
+      if(!error&&data){
+        const next=data as Entitlements
+        setEnt(next)
+        writeCache(current.user.id,next)
+      }else if(!background){
+        setEnt(null)
+      }
+    }finally{syncing.current=false}
   }
 
   useEffect(()=>{
-    sync()
-    const {data:{subscription}}=supabase.auth.onAuthStateChange(()=>sync())
-    const onFocus=()=>sync()
-    window.addEventListener('focus',onFocus)
-    window.addEventListener('pageshow',onFocus)
-    return()=>{subscription.unsubscribe();window.removeEventListener('focus',onFocus);window.removeEventListener('pageshow',onFocus)}
+    let active=true
+    async function bootstrap(){
+      const {data:{session:next}}=await supabase.auth.getSession()
+      if(!active)return
+      setSession(next)
+      if(!next){setEnt(null);setReady(true);return}
+      const cached=readCache(next.user.id)
+      if(cached){setEnt(cached);setReady(true);void refreshEntitlements(next,true)}
+      else{await refreshEntitlements(next);if(active)setReady(true)}
+    }
+    void bootstrap()
+
+    const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,next)=>{
+      if(!active)return
+      setSession(next)
+      if(!next){setEnt(null);writeCache('',null);setReady(true);return}
+      const cached=readCache(next.user.id)
+      if(cached){setEnt(cached);setReady(true)}
+      void refreshEntitlements(next,true)
+    })
+
+    const onPageShow=()=>{
+      if(document.visibilityState==='visible'){
+        supabase.auth.getSession().then(({data})=>{if(data.session)void refreshEntitlements(data.session,true)})
+      }
+    }
+    window.addEventListener('pageshow',onPageShow)
+    return()=>{active=false;subscription.unsubscribe();window.removeEventListener('pageshow',onPageShow)}
   },[])
 
   async function authenticate(){
@@ -46,19 +90,22 @@ export default function PaidAccessGate(){
     if(mode==='signup'&&password!==confirm){setMessage('As senhas não conferem.');return}
     setBusy(true);setMessage('')
     try{
+      let next:Session|null=null
       if(mode==='login'){
-        const {error}=await supabase.auth.signInWithPassword({email:clean,password})
+        const {data,error}=await supabase.auth.signInWithPassword({email:clean,password})
         if(error){setMessage(error.message.toLowerCase().includes('invalid login')?'E-mail ou senha incorretos.':error.message);return}
+        next=data.session
       }else{
         const {data,error}=await supabase.auth.signUp({email:clean,password,options:{emailRedirectTo:'https://lotosmart-ediineys-projects.vercel.app/app'}})
         if(error){setMessage(error.message);return}
         if(!data.session){setMessage('Conta criada. Confirme seu e-mail e depois entre para escolher um plano.');return}
+        next=data.session
       }
-      await sync()
+      if(next){setSession(next);await refreshEntitlements(next);setReady(true)}
     }finally{setBusy(false)}
   }
 
-  if(!ready)return <main className={styles.center}><div className={styles.brand}>Loto<span>Smart</span></div><p>Validando acesso…</p></main>
+  if(!ready)return <main className={styles.center}><div className={styles.brand}>Loto<span>Smart</span></div><p>Carregando sua conta…</p></main>
 
   if(!session)return <main className={styles.center}>
     <section className={styles.loginCard}>
@@ -89,7 +136,7 @@ export default function PaidAccessGate(){
         <article><span>PRO</span><strong>R$ 49,90<small>/mês</small></strong><ul><li>Portfólios e jogos ilimitados</li><li>Budget, Wheeling e Monte Carlo</li><li>Validation Engine</li><li>Histórico, conferência e alertas</li></ul><a href="/#planos">Escolher Pro</a></article>
         <article className={styles.founder}><span>FOUNDERS</span><strong>R$ 149<small> pagamento único</small></strong><ul><li>Tudo do Pro</li><li>Acesso vitalício aos recursos Pro atuais</li><li>Oferta limitada aos 100 primeiros</li></ul><a href="/#founders">Quero ser Founder</a></article>
       </div>
-      <div className={styles.actions}><a href="/">Voltar ao site</a><button onClick={()=>supabase.auth.signOut()}>Sair da conta</button></div>
+      <div className={styles.actions}><a href="/">Voltar ao site</a><button onClick={async()=>{writeCache('',null);await supabase.auth.signOut()}}>Sair da conta</button></div>
       <p className={styles.note}>Checkout Mercado Pago ainda está em preparação. Durante o QA, o administrador pode atribuir Pro ou Founders por mock no painel administrativo.</p>
     </section>
   </main>
