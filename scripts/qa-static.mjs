@@ -3,8 +3,8 @@ import { readFile } from 'node:fs/promises'
 const checks = [
   {
     file: 'app/app/labs/page.tsx',
-    mustInclude: ['Voltar ao Portfólio', 'Gerar novos jogos no Portfólio', "href=\"/app\"", 'Gaming Engine v4'],
-    mustNotInclude: ['Nova simulação', 'Voltar ao produto']
+    mustInclude: ['Voltar ao Portfólio', 'Gerar novos jogos no Portfólio', 'lotosmart-labs-context-v1', 'carteira real', "href=\"/app\"", 'Gaming Engine v4'],
+    mustNotInclude: ['Nova simulação', 'Voltar ao produto', 'quatro jogos estruturais mínimos como amostra']
   },
   {
     file: 'app/landing/PaidLanding.tsx',
@@ -18,7 +18,17 @@ const checks = [
   },
   {
     file: 'app/app/ProductApp.tsx',
-    mustNotInclude: ["plan:'free'|'pro'|'founders'", 'Seu plano Free permite']
+    mustInclude: ['save_generated_portfolio', 'lotosmart-labs-context-v1', 'Analisar estes jogos no Monte Carlo', "plan:'none'|'pro'|'founders'", "PRODUCT_VERSION='1.21.5'"],
+    mustNotInclude: ["plan:'free'|'pro'|'founders'", 'Seu plano Free permite', 'Plano Free:', 'V1.20.0']
+  },
+  {
+    file: 'app/admin/AdminPaid.tsx',
+    mustInclude: ['admin_record_pix_payment', 'admin_revoke_manual_access', 'PIX Pro', 'PIX Founder', 'R$ 49,90', 'R$ 149'],
+    mustNotInclude: ['Não existe plano Free. Pro é o plano recorrente de entrada e Founders é a oferta vitalícia limitada. Mock']
+  },
+  {
+    file: 'package.json',
+    mustInclude: ['"version": "1.21.5"']
   }
 ]
 
