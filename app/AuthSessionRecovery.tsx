@@ -1,24 +1,9 @@
 'use client'
 
 import { useEffect } from 'react'
+import { supabase } from '../lib/supabase'
 
-const RECOVERY_FLAG = 'lotosmart-auth-recovery-v1'
-
-function hasSupabaseSession() {
-  try {
-    for (let i = 0; i < localStorage.length; i++) {
-      const key = localStorage.key(i)
-      if (!key || !key.startsWith('sb-') || !key.endsWith('-auth-token')) continue
-      const raw = localStorage.getItem(key)
-      if (!raw) continue
-      const parsed = JSON.parse(raw)
-      if (parsed?.access_token && parsed?.user?.id) return true
-    }
-  } catch {
-    return false
-  }
-  return false
-}
+const RECOVERY_FLAG = 'lotosmart-auth-recovery-v2'
 
 function authUiLooksStuck() {
   const text = document.body?.innerText || ''
@@ -27,32 +12,42 @@ function authUiLooksStuck() {
 
 export default function AuthSessionRecovery() {
   useEffect(() => {
-    let ticks = 0
+    let recoveryTimer:number|undefined
 
-    const timer = window.setInterval(() => {
-      ticks += 1
-      if (!hasSupabaseSession()) return
-      if (!authUiLooksStuck()) return
-      if (sessionStorage.getItem(RECOVERY_FLAG)) return
-      if (ticks < 6) return
-
-      sessionStorage.setItem(RECOVERY_FLAG, '1')
-      window.location.reload()
-    }, 500)
-
-    const clearRecoveryFlag = () => {
-      if (!authUiLooksStuck()) sessionStorage.removeItem(RECOVERY_FLAG)
+    function recoverIfNeeded(hasSession:boolean){
+      if(!hasSession) return
+      if(!authUiLooksStuck()){
+        sessionStorage.removeItem(RECOVERY_FLAG)
+        return
+      }
+      if(sessionStorage.getItem(RECOVERY_FLAG)) return
+      if(recoveryTimer) window.clearTimeout(recoveryTimer)
+      recoveryTimer=window.setTimeout(()=>{
+        if(!authUiLooksStuck()) return
+        sessionStorage.setItem(RECOVERY_FLAG,'1')
+        window.location.reload()
+      },1800)
     }
 
-    window.addEventListener('focus', clearRecoveryFlag)
-    document.addEventListener('visibilitychange', clearRecoveryFlag)
+    supabase.auth.getSession().then(({data})=>recoverIfNeeded(Boolean(data.session)))
+    const {data:{subscription}}=supabase.auth.onAuthStateChange((_event,session)=>{
+      recoverIfNeeded(Boolean(session))
+    })
 
-    return () => {
-      window.clearInterval(timer)
-      window.removeEventListener('focus', clearRecoveryFlag)
-      document.removeEventListener('visibilitychange', clearRecoveryFlag)
+    const onFocus=()=>{
+      supabase.auth.getSession().then(({data})=>recoverIfNeeded(Boolean(data.session)))
     }
-  }, [])
+
+    window.addEventListener('focus',onFocus)
+    window.addEventListener('pageshow',onFocus)
+
+    return ()=>{
+      subscription.unsubscribe()
+      if(recoveryTimer) window.clearTimeout(recoveryTimer)
+      window.removeEventListener('focus',onFocus)
+      window.removeEventListener('pageshow',onFocus)
+    }
+  },[])
 
   return null
 }
