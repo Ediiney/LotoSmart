@@ -10,7 +10,8 @@ type Subscription={id:string;user_id:string;plan_id:string;status:string;billing
 type Transaction={id:string;status:string;gross_amount_brl:number;fee_amount_brl:number;net_amount_brl:number;paid_at:string|null;created_at:string}
 type Entry={id:string;entry_type:'income'|'expense';category:string;description:string;amount_brl:number;occurred_on:string;vendor:string|null;recurring:boolean}
 type HealthDraw={game:string;contest_number:number;status:string;confidence:number;source_count:number;updated_at:string}
-type HealthPayload={ok:boolean;database:string;latency_ms:number;data?:{status:string;missing:string[];stale:string[];draws:HealthDraw[]};engines?:Record<string,string>;integrations?:Record<string,string>;checked_at:string}
+type HealthPayload={ok:boolean;database:string;latency_ms:number;data?:{status:string;missing:string[];stale:string[];provisional?:string[];draws:HealthDraw[]};data_agent?:{status:string;fresh_sources:number};engines?:Record<string,string>;integrations?:Record<string,string>;checked_at:string}
+type MockPlan='free'|'pro'|'founders'
 
 const brl=new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'})
 const gameName:Record<string,string>={megasena:'Mega-Sena',lotofacil:'Lotofácil',quina:'Quina'}
@@ -26,6 +27,7 @@ export default function AdminPage(){
   const [health,setHealth]=useState<HealthPayload|null>(null)
   const [form,setForm]=useState({entry_type:'expense',category:'Infraestrutura',description:'',amount_brl:'',vendor:'',occurred_on:new Date().toISOString().slice(0,10)})
   const [message,setMessage]=useState('')
+  const [planBusy,setPlanBusy]=useState<string|null>(null)
 
   useEffect(()=>{
     supabase.auth.getSession().then(({data})=>{setSession(data.session);setReady(true)})
@@ -62,7 +64,6 @@ export default function AdminPage(){
 
   const metrics=useMemo(()=>{
     const paying=new Set(subscriptions.filter(s=>['active','trialing'].includes(s.status)&&s.plan_id!=='free').map(s=>s.user_id)).size
-    const foundersSubscriptions=new Set(subscriptions.filter(s=>['active','trialing'].includes(s.status)&&s.plan_id==='founders').map(s=>s.user_id)).size
     const paid=transactions.filter(t=>t.status==='paid').reduce((a,t)=>a+Number(t.net_amount_brl||0),0)
     const manualIncome=entries.filter(e=>e.entry_type==='income').reduce((a,e)=>a+Number(e.amount_brl),0)
     const expenses=entries.filter(e=>e.entry_type==='expense').reduce((a,e)=>a+Number(e.amount_brl),0)
@@ -72,7 +73,7 @@ export default function AdminPage(){
     const pro=profiles.filter(p=>p.role!=='admin'&&p.plan_code==='pro').length
     const founders=profiles.filter(p=>p.role!=='admin'&&p.plan_code==='founders').length
     const admins=profiles.filter(p=>p.role==='admin').length
-    return {paying,foundersSubscriptions,free,pro,founders,admins,revenue:paid+manualIncome,expenses,profit:paid+manualIncome-expenses,mrr:monthly+yearly}
+    return {paying,free,pro,founders,admins,revenue:paid+manualIncome,expenses,profit:paid+manualIncome-expenses,mrr:monthly+yearly}
   },[profiles,subscriptions,transactions,entries])
 
   async function addEntry(e:FormEvent){
@@ -87,15 +88,28 @@ export default function AdminPage(){
     await loadAll()
   }
 
+  async function setMockPlan(profile:Profile,targetPlan:MockPlan){
+    if(profile.role==='admin')return
+    setPlanBusy(profile.id);setMessage('')
+    try{
+      const {data,error}=await supabase.rpc('admin_mock_set_plan',{target_user:profile.id,target_plan:targetPlan})
+      if(error){setMessage(`Não foi possível alterar o plano: ${error.message}`);return}
+      setMessage(`${profile.email||'Usuário'} agora está em ${targetPlan.toUpperCase()} no ambiente de teste.`)
+      await loadAll()
+    }finally{setPlanBusy(null)}
+  }
+
   if(!ready)return <main className={styles.center}>Carregando painel...</main>
   if(!session)return <main className={styles.center}><div><h1>Acesso administrativo</h1><p>Entre no LotoSmart antes de abrir o painel.</p><a href="/app">Entrar no produto</a></div></main>
   if(!authorized)return <main className={styles.center}><div><h1>Acesso restrito</h1><p>Sua conta não possui permissão administrativa.</p><a href="/app">Voltar ao LotoSmart</a></div></main>
 
   return <main className={styles.page}>
     <header>
-      <div><p>LOTO<span>SMART</span> • ADMIN 2.0</p><h1>Visão do negócio</h1></div>
+      <div><p>LOTO<span>SMART</span> • ADMIN 2.1</p><h1>Visão do negócio</h1></div>
       <div style={{display:'flex',gap:16}}><a href="/">Abrir site</a><a href="/app">Abrir produto</a></div>
     </header>
+
+    {message&&<section className={styles.panel} style={{padding:14,marginBottom:16}}><strong>{message}</strong></section>}
 
     <section className={styles.metrics}>
       <Metric label="Usuários" value={String(profiles.length)}/>
@@ -116,9 +130,10 @@ export default function AdminPage(){
         <button onClick={loadAll}>Atualizar</button>
       </div>
       <div style={{display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(180px,1fr))',gap:12,marginTop:16}}>
-        <HealthCard label="Status" value={health?.ok?'SAUDÁVEL':'DEGRADADO'} ok={Boolean(health?.ok)}/>
+        <HealthCard label="Dados" value={(health?.data?.status||'aguardando').toUpperCase()} ok={health?.data?.status==='healthy'}/>
         <HealthCard label="Banco" value={(health?.database||'aguardando').toUpperCase()} ok={health?.database==='ok'}/>
-        <HealthCard label="Data Agent" value={health?.engines?.data_agent||'aguardando'} ok={Boolean(health?.engines?.data_agent)}/>
+        <HealthCard label="Data Agent" value={`${health?.engines?.data_agent||'aguardando'} • ${health?.data_agent?.status||'unknown'}`} ok={health?.data_agent?.status==='success'}/>
+        <HealthCard label="Fontes frescas" value={String(health?.data_agent?.fresh_sources??0)} ok={(health?.data_agent?.fresh_sources??0)>=3}/>
         <HealthCard label="Gaming Engine" value={health?.engines?.gaming_engine||'aguardando'} ok={Boolean(health?.engines?.gaming_engine)}/>
         <HealthCard label="Validation" value={health?.engines?.validation_engine||'aguardando'} ok={Boolean(health?.engines?.validation_engine)}/>
         <HealthCard label="Mercado Pago" value={health?.integrations?.mercado_pago||'pending'} ok={false}/>
@@ -142,7 +157,6 @@ export default function AdminPage(){
           <input value={form.vendor} onChange={e=>setForm({...form,vendor:e.target.value})} placeholder="Fornecedor (opcional)"/>
           <input type="date" value={form.occurred_on} onChange={e=>setForm({...form,occurred_on:e.target.value})}/>
           <button>Registrar lançamento</button>
-          {message&&<small>{message}</small>}
         </form>
       </section>
 
@@ -156,10 +170,19 @@ export default function AdminPage(){
     </div>
 
     <section className={styles.panel}>
-      <h2>Usuários recentes</h2>
+      <h2>Usuários e QA de planos</h2>
+      <p>Os botões abaixo usam apenas o mock administrativo. Eles não contam como assinatura paga e não substituirão uma assinatura real quando o Mercado Pago for conectado.</p>
       <div className={styles.table}>
-        <div className={styles.tableHead}><span>E-mail</span><span>Perfil</span><span>Plano</span><span>Cadastro</span></div>
-        {profiles.slice(0,50).map(p=><div key={p.id}><span>{p.email||'—'}</span><span>{p.role}</span><span>{p.plan_code}</span><span>{new Date(p.created_at).toLocaleDateString('pt-BR')}</span></div>)}
+        <div className={styles.tableHead}><span>E-mail</span><span>Perfil</span><span>Plano / teste</span><span>Cadastro</span></div>
+        {profiles.slice(0,50).map(p=><div key={p.id}>
+          <span>{p.email||'—'}</span>
+          <span>{p.role}</span>
+          <span style={{display:'flex',alignItems:'center',gap:6,flexWrap:'wrap'}}>
+            <b>{p.plan_code}</b>
+            {p.role!=='admin'&&(['free','pro','founders'] as MockPlan[]).map(plan=><button key={plan} disabled={planBusy===p.id||p.plan_code===plan} onClick={()=>setMockPlan(p,plan)} style={{padding:'5px 8px',fontSize:10,borderRadius:8}}>{plan}</button>)}
+          </span>
+          <span>{new Date(p.created_at).toLocaleDateString('pt-BR')}</span>
+        </div>)}
       </div>
     </section>
   </main>
