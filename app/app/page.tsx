@@ -1,8 +1,7 @@
 'use client'
 
-import ProductApp from './ProductApp'
-import SavedGamesManager from './SavedGamesManager'
+import PaidAccessGate from './PaidAccessGate'
 
 export default function ProductPage(){
-  return <><ProductApp/><SavedGamesManager/></>
+  return <PaidAccessGate/>
 }
