@@ -62,7 +62,6 @@ export default function PlanGuard(){
       if(!active) return
 
       if(error || !data){
-        // Fail closed: recursos pagos não são liberados se o plano não puder ser validado.
         setEntitlements({
           role:'user',
           plan:'free',
@@ -102,32 +101,32 @@ export default function PlanGuard(){
 
     function decorate(){
       const nav = document.querySelector('nav.sections')
-      if(!nav) return
+      if(nav){
+        const buttons = Array.from(nav.querySelectorAll('button'))
+        for(const button of buttons){
+          const raw = button.textContent || ''
+          const feature = PRO_FEATURES.find(item => raw.replace('🔒','').trim().includes(item.match))
+          const existingLock = button.querySelector('[data-lotosmart-lock]')
 
-      const buttons = Array.from(nav.querySelectorAll('button'))
-      for(const button of buttons){
-        const raw = button.textContent || ''
-        const feature = PRO_FEATURES.find(item => raw.replace('🔒','').trim().includes(item.match))
-
-        if(entitlements?.is_pro){
-          if(button.dataset.planLocked === '1'){
+          if(entitlements?.is_pro){
             button.dataset.planLocked = '0'
             button.style.opacity = ''
             button.style.cursor = ''
-            const lock = button.querySelector('[data-lotosmart-lock]')
-            lock?.remove()
+            existingLock?.remove()
+            continue
           }
-          continue
-        }
 
-        if(feature && button.dataset.planLocked !== '1'){
-          button.dataset.planLocked = '1'
-          button.style.opacity = '0.72'
-          button.style.cursor = 'not-allowed'
-          const lock = document.createElement('span')
-          lock.textContent = ' 🔒'
-          lock.dataset.lotosmartLock = '1'
-          button.appendChild(lock)
+          if(feature){
+            button.dataset.planLocked = '1'
+            button.style.opacity = '0.72'
+            button.style.cursor = 'not-allowed'
+            if(!existingLock){
+              const lock = document.createElement('span')
+              lock.textContent = ' 🔒'
+              lock.dataset.lotosmartLock = '1'
+              button.appendChild(lock)
+            }
+          }
         }
       }
 
@@ -137,26 +136,22 @@ export default function PlanGuard(){
         if(!badge){
           badge = document.createElement('span')
           badge.dataset.lotosmartPlanBadge = '1'
-          badge.style.border = '1px solid #28503f'
-          badge.style.background = '#0b1e17'
-          badge.style.borderRadius = '999px'
-          badge.style.padding = '8px 11px'
-          badge.style.fontSize = '10px'
-          badge.style.fontWeight = '900'
-          badge.style.letterSpacing = '1px'
+          badge.className = 'planRuntimeBadge'
           head.prepend(badge)
         }
-        const label = entitlements?.role === 'admin' ? 'ADMIN' : (entitlements?.plan || 'FREE').toUpperCase()
-        badge.textContent = label
-        badge.style.color = entitlements?.plan === 'founders' ? '#f4cb67' : entitlements?.is_pro ? '#5be899' : '#9fb5ac'
+        badge.textContent = entitlements?.role === 'admin' ? 'ADMIN' : (entitlements?.plan || 'FREE').toUpperCase()
+        badge.dataset.plan = entitlements?.plan || 'free'
 
-        if(entitlements?.role === 'admin' && !head.querySelector('[data-lotosmart-admin-link]')){
+        const adminLink = head.querySelector('[data-lotosmart-admin-link]') as HTMLAnchorElement|null
+        if(entitlements?.role === 'admin' && !adminLink){
           const link = document.createElement('a')
           link.href = '/admin'
           link.textContent = 'Admin'
           link.dataset.lotosmartAdminLink = '1'
-          link.className = 'ghost'
+          link.className = 'ghost planAdminLink'
           head.insertBefore(link,badge.nextSibling)
+        } else if(entitlements?.role !== 'admin') {
+          adminLink?.remove()
         }
       }
     }
@@ -175,13 +170,20 @@ export default function PlanGuard(){
       showUpgrade(feature.feature)
     }
 
-    decorate()
-    const observer = new MutationObserver(decorate)
-    observer.observe(document.body,{childList:true,subtree:true})
+    const raf = requestAnimationFrame(decorate)
+    const delayed = window.setTimeout(decorate,350)
+    const onFocus = () => decorate()
+    const onPageShow = () => decorate()
+
+    window.addEventListener('focus',onFocus)
+    window.addEventListener('pageshow',onPageShow)
     document.addEventListener('click',capture,true)
 
     return ()=>{
-      observer.disconnect()
+      cancelAnimationFrame(raf)
+      window.clearTimeout(delayed)
+      window.removeEventListener('focus',onFocus)
+      window.removeEventListener('pageshow',onPageShow)
       document.removeEventListener('click',capture,true)
     }
   },[entitlements,loading])
