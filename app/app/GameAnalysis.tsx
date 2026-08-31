@@ -74,10 +74,8 @@ export default function GameAnalysis({game,games}:Props){
   const avgOdd=(stats.reduce((a,s)=>a+s.odd,0)/stats.length).toFixed(1)
   const avgEven=(stats.reduce((a,s)=>a+s.even,0)/stats.length).toFixed(1)
   const allSequences=stats.reduce((a,s)=>a+s.sequencePairs,0)
-  const coverage=((unique/Math.max(1,flat.length))*100).toFixed(1)
   const mostUsedEnding=new Map<string,number>()
   stats.flatMap(s=>s.endings).forEach(label=>{const ending=label.split(' ')[0];mostUsedEnding.set(ending,(mostUsedEnding.get(ending)||0)+1)})
-  const endingSummary=[...mostUsedEnding.entries()].sort((a,b)=>b[1]-a[1])[0]?.[0]||'—'
 
   return <section className="gameAnalysis" aria-label="Análise matemática dos jogos">
     <div className="analysisIntro">
@@ -95,7 +93,6 @@ export default function GameAnalysis({game,games}:Props){
       <MetricCard label="Sequências" value={String(allSequences)} help="Pares consecutivos encontrados nos jogos, como 07-08 ou 14-15."/>
       <MetricCard label="Números únicos" value={String(unique)} help="Quantidade de dezenas diferentes usadas nos jogos."/>
       <MetricCard label="Sobreposição média" value={avgOverlap} help="Média de números repetidos quando comparamos cada par de jogos."/>
-      <MetricCard label="Cobertura da carteira" value={`${coverage}%`} help="Percentual de posições dos jogos ocupadas por números únicos."/>
     </div>
 
     <div className="analysisGames">
@@ -118,7 +115,7 @@ export default function GameAnalysis({game,games}:Props){
       <div className="analysisSteps">
         <p><b>1. Estrutura.</b> Cada combinação é validada para conter a quantidade correta de dezenas, sem duplicidades e dentro do universo da modalidade.</p>
         <p><b>2. Perfil.</b> Calculamos soma, média, pares/ímpares, intervalos, sequências consecutivas e distribuição das dezenas por faixas.</p>
-        <p><b>3. Carteira.</b> Comparamos os jogos entre si para medir números únicos, sobreposição e cobertura. Isso ajuda a enxergar redundâncias.</p>
+        <p><b>3. Carteira.</b> Comparamos os jogos entre si para medir números únicos e sobreposição. Isso ajuda a enxergar redundâncias.</p>
         <p><b>4. Transparência.</b> Essas métricas descrevem a combinação gerada. Elas não aumentam matematicamente a probabilidade de uma dezena específica sair no próximo sorteio.</p>
       </div>
     </div>
