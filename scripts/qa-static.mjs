@@ -26,7 +26,7 @@ const checks = [
   },
   {
     file: 'app/app/ProductApp.tsx',
-    mustInclude: ['save_generated_portfolio', 'lotosmart-labs-context-v1', 'Analisar estes jogos no Monte Carlo', "plan:'none'|'pro'|'founders'", "PRODUCT_VERSION='1.21.6'", '/api/public-state', 'initialSession'],
+    mustInclude: ['save_generated_portfolio', 'lotosmart-labs-context-v1', 'Analisar estes jogos no Monte Carlo', "plan:'none'|'pro'|'founders'", "PRODUCT_VERSION='1.22.0'", '/api/public-state', 'initialSession'],
     mustNotInclude: ["plan:'free'|'pro'|'founders'", 'Seu plano Free permite', 'Plano Free:', 'V1.20.0', 'supabase.auth.getSession()', 'onAuthStateChange']
   },
   {
@@ -35,7 +35,7 @@ const checks = [
   },
   {
     file: 'package.json',
-    mustInclude: ['"version": "1.21.6"']
+    mustInclude: ['"version": "1.22.0"']
   }
 ]
 
