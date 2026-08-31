@@ -104,3 +104,35 @@ main:has(.lotTabs button.active) .lotTabs button.active::after{
   border-radius:99px;
   background:var(--lottery-accent-strong);
 }
+
+/* V1.24 — navegação enxuta: o produto expõe apenas criação e Meus Jogos.
+   Os motores avançados continuam preservados no código para uso futuro/fluxos internos,
+   mas não poluem a navegação principal do usuário. */
+.sections button:nth-child(2),
+.sections button:nth-child(3),
+.sections button:nth-child(4),
+.sections button:nth-child(5),
+.sections button:nth-child(6),
+.sections button:nth-child(8),
+.sections button:nth-child(9){
+  display:none!important;
+}
+
+.sections{
+  display:flex!important;
+  gap:10px!important;
+  flex-wrap:wrap!important;
+}
+
+.sections button:first-child,
+.sections button:nth-child(7){
+  display:inline-flex!important;
+}
+
+@media (max-width:640px){
+  .sections button:first-child,
+  .sections button:nth-child(7){
+    flex:1 1 0;
+    min-width:0;
+  }
+}
