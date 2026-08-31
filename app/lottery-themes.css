@@ -1,0 +1,106 @@
+/* V1.23 — identidade cromática por modalidade, inspirada nas Loterias CAIXA.
+   Mantém o LotoSmart escuro como base e troca apenas os acentos por modalidade. */
+main:has(.lotTabs button:nth-child(1).active){
+  --lottery-accent:#35a854;
+  --lottery-accent-strong:#49c56a;
+  --lottery-soft:#0d2a1b;
+  --lottery-border:#28623d;
+  --lottery-ball-text:#12602b;
+}
+main:has(.lotTabs button:nth-child(2).active){
+  --lottery-accent:#8e44ad;
+  --lottery-accent-strong:#a95bc8;
+  --lottery-soft:#2a1531;
+  --lottery-border:#69347f;
+  --lottery-ball-text:#64227d;
+}
+main:has(.lotTabs button:nth-child(3).active){
+  --lottery-accent:#7d3fb2;
+  --lottery-accent-strong:#a064ce;
+  --lottery-soft:#291735;
+  --lottery-border:#66348b;
+  --lottery-ball-text:#5d287e;
+}
+
+main:has(.lotTabs button.active) .brand span,
+main:has(.lotTabs button.active) .eyebrow,
+main:has(.lotTabs button.active) .metric strong,
+main:has(.lotTabs button.active) .bigMetrics strong,
+main:has(.lotTabs button.active) .publicMetrics strong,
+main:has(.lotTabs button.active) .drawMeta span:first-child,
+main:has(.lotTabs button.active) .analysisBadge strong,
+main:has(.lotTabs button.active) .analysisGameHead span,
+main:has(.lotTabs button.active) .analysisGameHead>strong,
+main:has(.lotTabs button.active) .analysisSteps b,
+main:has(.lotTabs button.active) .validationDisclaimer b{
+  color:var(--lottery-accent-strong)!important;
+}
+
+main:has(.lotTabs button.active) .lotTabs button.active,
+main:has(.lotTabs button.active) .sections button.active{
+  background:var(--lottery-soft)!important;
+  border-color:var(--lottery-accent)!important;
+  color:#fff!important;
+  box-shadow:0 0 0 1px color-mix(in srgb,var(--lottery-accent) 18%,transparent),0 5px 18px color-mix(in srgb,var(--lottery-accent) 10%,transparent);
+}
+
+main:has(.lotTabs button.active) .lotTabs button:hover,
+main:has(.lotTabs button.active) .sections button:hover{
+  border-color:color-mix(in srgb,var(--lottery-accent) 70%,#1c362d)!important;
+  color:#f5faf7;
+}
+
+main:has(.lotTabs button.active) .cta{
+  background:var(--lottery-accent-strong)!important;
+  color:#fff!important;
+  box-shadow:0 8px 24px color-mix(in srgb,var(--lottery-accent) 14%,transparent);
+}
+
+main:has(.lotTabs button.active) .save,
+main:has(.lotTabs button.active) .toast{
+  background:var(--lottery-soft)!important;
+  border-color:var(--lottery-border)!important;
+}
+
+main:has(.lotTabs button.active) .controls input[type=range],
+main:has(.lotTabs button.active) .validationControls input[type=range]{
+  accent-color:var(--lottery-accent-strong)!important;
+}
+
+main:has(.lotTabs button.active) .panel,
+main:has(.lotTabs button.active) .prize,
+main:has(.lotTabs button.active) .drawCard,
+main:has(.lotTabs button.active) .analysisExplanation{
+  border-color:color-mix(in srgb,var(--lottery-border) 72%,#19362b)!important;
+}
+
+/* Bolas: brancas como base, com o acento da modalidade apenas no contorno e tipografia. */
+main:has(.lotTabs button.active) .balls b{
+  background:#fff!important;
+  color:var(--lottery-ball-text)!important;
+  border:1px solid color-mix(in srgb,var(--lottery-accent) 32%,#dce8e2);
+  box-shadow:0 2px 8px color-mix(in srgb,var(--lottery-accent) 12%,transparent);
+}
+
+main:has(.lotTabs button.active) .gameRow,
+main:has(.lotTabs button.active) .analysisGames .analysisGame,
+main:has(.lotTabs button.active) .analysisMetric,
+main:has(.lotTabs button.active) .metrics div{
+  border-color:color-mix(in srgb,var(--lottery-border) 58%,#173229)!important;
+}
+
+/* Microdetalhe no card do concurso, sem transformar a tela inteira. */
+main:has(.lotTabs button.active) .prize{
+  background:linear-gradient(145deg,#0e211b 0%,color-mix(in srgb,var(--lottery-soft) 24%,#0e211b) 100%)!important;
+}
+
+/* Modalidade ativa ganha uma pequena barra de identidade, útil principalmente no mobile. */
+main:has(.lotTabs button.active) .lotTabs button.active::after{
+  content:"";
+  display:block;
+  width:18px;
+  height:2px;
+  margin:6px auto -4px;
+  border-radius:99px;
+  background:var(--lottery-accent-strong);
+}
