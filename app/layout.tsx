@@ -1,6 +1,7 @@
 import './globals.css'
 import './mobile-v119.css'
 import './lottery-themes.css'
+import './app/product-minimal.css'
 import type {Metadata} from 'next'
 import AuthSessionRecovery from './AuthSessionRecovery'
 
