@@ -1,5 +1,14 @@
-/* V1.24 — minimal product navigation. Advanced engines remain available by direct flow. */
-.sections button:nth-child(2),.sections button:nth-child(3),.sections button:nth-child(4),.sections button:nth-child(5),.sections button:nth-child(6),.sections button:nth-child(8),.sections button:nth-child(9){display:none!important}
-.sections{display:flex!important;gap:10px!important;flex-wrap:wrap!important}
-.sections button:first-child,.sections button:nth-child(7){display:inline-flex!important}
-@media(max-width:640px){.sections button:first-child,.sections button:nth-child(7){flex:1 1 0;min-width:0}}
+/* LotoNex v1.26 — SaaS navigation shell: one clear job per screen. */
+.sections{display:flex!important;gap:10px!important;flex-wrap:wrap!important;margin-bottom:18px}
+.sections button{display:inline-flex!important;flex:0 0 auto}
+.sections button.active{font-weight:700}
+
+/* Mobile: navigation becomes a compact action bar, without exposing internal engines. */
+@media(max-width:640px){
+  .sections{position:sticky;bottom:8px;z-index:20;padding:8px;margin:0 -4px 16px;background:rgba(8,18,14,.94);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,.08);border-radius:14px;box-shadow:0 10px 30px rgba(0,0,0,.28)}
+  .sections button{flex:1 1 0;justify-content:center;min-width:0;padding:11px 10px}
+}
+
+/* Brand is always an affordance to return Home. */
+.brand{cursor:pointer}
+.brand:focus-visible{outline:2px solid currentColor;outline-offset:4px;border-radius:6px}
