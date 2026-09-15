@@ -1,0 +1,29 @@
+/* V1.25 — LotoSmart Light UI
+   Claro e moderno, preservando a identidade cromática de cada modalidade. */
+:root{--ls-bg:#f4f7f5;--ls-surface:#fff;--ls-surface-soft:#f7faf8;--ls-border:#dce6e1;--ls-text:#18251f;--ls-muted:#6d8178;--ls-shadow:0 8px 28px rgba(24,55,42,.055)}
+body{background:var(--ls-bg)!important;color:var(--ls-text)!important}
+.brand{color:#17352a!important}.brand span{color:#218c55!important}.brand small{color:#7a9188!important}.email{color:#657a71!important}
+.login,.ghost{background:#fff!important;color:#31443c!important;border-color:#d7e2dc!important}
+.hero h1,.publicCopy h1{color:#16251e!important}.hero>div>p:not(.eyebrow),.lead{color:#647970!important}.eyebrow{color:#208d55!important}
+.prize,.panel,.drawCard,.loginCard,.confirmCard,.publicMetrics div,.steps>div{background:var(--ls-surface)!important;border-color:var(--ls-border)!important;box-shadow:var(--ls-shadow)!important;color:var(--ls-text)}
+.prize strong{color:#19362a!important}.prize span{color:#70847c!important}
+.lotTabs button,.sections button{background:#fff!important;color:#60766c!important;border-color:#d9e4de!important}.lotTabs button.active,.sections button.active{background:#edf7f1!important;border-color:#43a56f!important;color:#14633b!important}
+.cta{background:#238f57!important;color:#fff!important}.save{background:#e3f3ea!important;color:#17623b!important}
+.controls label{color:#4c6158!important}.controls input[type=range]{accent-color:#2b985d!important}
+.summary div,.metrics div,.miniStats span,.optionCard,.validationCompare article,.validationDisclaimer,.sourceList>div,.bigMetrics>div,.alertGrid>div{background:#f7faf8!important;border-color:#e3ebe7!important;color:#203d30!important}
+.summary small,.metrics small,.savedCard small,.drawCard small,.note,.passwordHint,.lead,.publicActions span,.publicMetrics span,.steps p,.alertGrid p{color:#71857c!important}
+.summary strong,.metrics b{color:#203d30!important}.bigMetrics strong,.publicMetrics strong,.metric strong{color:#238f57!important}
+.gameRow{background:#fff!important;border:1px solid #e4ebe7!important;border-radius:14px;padding:14px 12px;margin:8px 0;box-shadow:0 3px 12px rgba(24,55,42,.025)}
+.gameRow>span{color:#758981!important}.balls b{background:#fff!important;color:#183a2c!important;border:1px solid #d6e3dc!important;box-shadow:0 2px 7px rgba(28,65,49,.07)!important}
+.savedCard{background:#fff!important;border:1px solid #e0e9e4!important;border-radius:18px;padding:18px;margin:12px 0;box-shadow:0 5px 20px rgba(24,55,42,.035)!important}.savedCard>div:first-child{border-bottom:1px solid #e9efec;padding-bottom:12px}
+.toast{background:#edf8f1!important;border-color:#b9dec9!important;color:#175f3a!important}.empty{color:#74877f!important}.empty>div{color:#d8e8df!important}
+.drawMeta{border-top-color:#e2eae6!important;color:#748880!important}.drawMeta span:first-child{color:#238f57!important}.drawSkeleton{background:#f3f7f5!important;border-color:#e1eae5!important;color:#72867d!important}
+.howItWorks{border-top-color:#dfe9e4!important}.howItWorks h2{color:#20352b!important}.steps>div{background:#fff!important;border-color:#dfe8e4!important}.steps b{color:#238f57!important}
+.modalBackdrop{background:rgba(20,35,29,.42)!important}.modal{background:#fff!important;border-color:#dce6e1!important;box-shadow:0 20px 60px rgba(20,50,37,.16)!important}.close{color:#71857c!important}.text{background:#f8faf9!important;border-color:#d6e2dc!important;color:#20352b!important}
+.authModes button{background:#f7faf8!important;border-color:#d9e5df!important;color:#60766c!important}.authModes button.selected{background:#edf8f1!important;color:#14633b!important;border-color:#45a874!important}
+footer{color:#83958d!important}
+/* Modalidade: a estrutura permanece clara; os acentos continuam vindo de lottery-themes.css. */
+main:has(.lotTabs button.active) .sections button.active{background:color-mix(in srgb,var(--lottery-soft,#edf7f1) 75%,#fff)!important;border-color:var(--lottery-accent,#43a56f)!important;color:var(--lottery-accent-strong,#14633b)!important}
+main:has(.lotTabs button.active) .cta{background:var(--lottery-accent-strong,#238f57)!important}
+main:has(.lotTabs button.active) .save{background:color-mix(in srgb,var(--lottery-accent,#43a56f) 10%,#fff)!important;color:var(--lottery-ball-text,#17623b)!important;border:1px solid color-mix(in srgb,var(--lottery-accent,#43a56f) 25%,#dce6e1)!important}
+main:has(.lotTabs button.active) .balls b{background:#fff!important;color:var(--lottery-ball-text,#183a2c)!important;border-color:color-mix(in srgb,var(--lottery-accent,#43a56f) 32%,#d6e3dc)!important}
